@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Does Base64 Encoding/Decoding
+  Enables TLS 1.2 on a Windows System
   
 .DESCRIPTION
   This script will Enable TLS 1.2 on a Windows System for use with Ansible
@@ -68,7 +68,7 @@ try
 
   Restart-Computer
 
-)
+}
 catch
 {
   # Catch any errors and report them
