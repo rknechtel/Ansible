@@ -1,0 +1,57 @@
+---
+- name: Secure and Harden RHEL 8 Server
+  hosts: rhel8_servers
+  become: true
+  tasks:
+    - name: Ensure firewalld is installed and running
+      dnf:
+        name: firewalld
+        state: present
+
+    - name: Enable and start firewalld service
+      service:
+        name: firewalld
+        state: started
+        enabled: true
+      tags: [firewall]
+
+    - name: Configure SSH - Disable root login
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin no'
+        validate: 'sshd -t -f %s'
+      notify: Restart sshd
+      tags: [ssh, hardening]
+
+    - name: Configure SSH - Disable empty passwords
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitEmptyPasswords'
+        line: 'PermitEmptyPasswords no'
+        validate: 'sshd -t -f %s'
+      notify: Restart sshd
+      tags: [ssh, hardening]
+
+    - name: Configure SSH - Disable password authentication
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication'
+        line: 'PasswordAuthentication no'
+        validate: 'sshd -t -f %s'
+      notify: Restart sshd
+      tags: [ssh, hardening]
+
+    - name: Set secure permissions on /etc/shadow
+      file:
+        path: /etc/shadow
+        owner: root
+        group: root
+        mode: '0000'
+      tags: [permissions]
+
+  handlers:
+    - name: Restart sshd
+      service:
+        name: sshd
+        state: restarted

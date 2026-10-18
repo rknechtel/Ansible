@@ -1,0 +1,75 @@
+---
+- name: Secure and Harden RHEL 10 Server
+  hosts: rhel10_servers
+  become: true
+  vars:
+    ssh_allowed_users: "admin"
+
+  tasks:
+    - name: Ensure system packages are up to date
+      dnf:
+        name: "*"
+        state: latest
+        security: true
+      tags: [updates, packages]
+
+    - name: Ensure firewalld is installed and running
+      dnf:
+        name: firewalld
+        state: present
+
+    - name: Enable and start firewalld service
+      service:
+        name: firewalld
+        state: started
+        enabled: true
+      tags: [firewall]
+
+    - name: Configure SSH - Disable root login
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin no'
+        validate: 'sshd -t -f %s'
+      notify: Restart sshd
+      tags: [ssh, hardening]
+
+    - name: Configure SSH - Disable empty passwords
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitEmptyPasswords'
+        line: 'PermitEmptyPasswords no'
+        validate: 'sshd -t -f %s'
+      notify: Restart sshd
+      tags: [ssh, hardening]
+
+    - name: Configure SSH - Disable password authentication (Key-only enforcement recommended)
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication'
+        line: 'PasswordAuthentication no'
+        validate: 'sshd -t -f %s'
+      notify: Restart sshd
+      tags: [ssh, hardening]
+
+    - name: Set secure permissions on /etc/shadow
+      file:
+        path: /etc/shadow
+        owner: root
+        group: root
+        mode: '0000'
+      tags: [permissions]
+
+    - name: Set secure permissions on /etc/passwd
+      file:
+        path: /etc/passwd
+        owner: root
+        group: root
+        mode: '0644'
+      tags: [permissions]
+
+  handlers:
+    - name: Restart sshd
+      service:
+        name: sshd
+        state: restarted
